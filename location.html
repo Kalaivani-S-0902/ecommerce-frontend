@@ -95,8 +95,12 @@ body{
 </div>
 
 <script>
-const token = localStorage.getItem("talk2buy_token");
 
+let token = localStorage.getItem("talk2buy_token");
+
+if(!token){
+  window.location.href = "login.html";
+}
 function speak(text){
   return new Promise(resolve=>{
     const msg = new SpeechSynthesisUtterance(text);
@@ -166,7 +170,7 @@ async function startTracking(){
 function logout(){
   localStorage.removeItem("talk2buy_token");
   alert("Logged out");
-  window.location.href = "login.html";
+  window.location.href = "/login.html";
 }
 
 // -----------------------------
@@ -184,13 +188,13 @@ async function askNextAction(){
 
     if(command.includes("yes")){
       await speak("Redirecting to search page");
-      window.location.href = "search.html";
+      window.location.href = "/search.html";
       return;
     }
 
     if(command.includes("no")){
       await speak("Logging out");
-      window.location.href = "login.html";
+      window.location.href = "/login.html";
       return;
     }
 
@@ -200,7 +204,7 @@ async function askNextAction(){
 
   //  After 3 failed attempts
   await speak("Voice not recognized. Redirecting to login page");
-  window.location.href = "login.html";
+  window.location.href = "/login.html";
 }
 
 function listen(time=5000){

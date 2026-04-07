@@ -106,7 +106,7 @@ button{
 <script>
 const token = localStorage.getItem("talk2buy_token");
 if(!token){
-  window.location.href = "login.html";
+  window.location.href = "/login.html";
 }
 
 function speak(text){
@@ -248,7 +248,7 @@ async function placeOrder(){
 
 
       // 👉 SUCCESS → go to location page
-      window.location.href = "orders.html";
+      window.location.href = "/orders.html";
 
     } else {
       //  FAILURE → go back to cart
@@ -257,7 +257,7 @@ async function placeOrder(){
       await speak("Order failed. Returning to cart");
       alert("Order failed. Returning to cart");
 
-      window.location.href = "cart.html";
+      window.location.href = "/cart.html";
     }
 
   }catch(error){
@@ -267,18 +267,18 @@ async function placeOrder(){
     alert("Network error");
 
     //  NETWORK ERROR → go back to cart
-    window.location.href = "cart.html";
+    window.location.href = "/cart.html";
   }
 }
 // Logout
 function logout(){
   localStorage.removeItem("talk2buy_token");
   alert("Logged out");
-  window.location.href = "login.html";
+  window.location.href = "/login.html";
 }
 
 function goBack(){
-  window.location.href = "cart.html";
+  window.location.href = "/cart.html";
 }
 
 // Start

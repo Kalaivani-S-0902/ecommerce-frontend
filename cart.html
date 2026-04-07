@@ -89,11 +89,11 @@ h2{text-align:center; margin-bottom:20px;}
 </div>
 
 <script>
-const BACKEND_URL = "https://ecommerce-backend-7c95.onrender.com";
+const BACKEND_URL = "http://127.0.0.1:8000";
 const token = localStorage.getItem("talk2buy_token");
 console.log("TOKEN:", token);
 let repeatCount = 0;
-if(!token) window.location.href="login.html";
+if(!token) window.location.href="/login.html";
 
 // Voice helpers
 function speak(text){
@@ -284,7 +284,7 @@ const finalCommand = await listen(8000);
 
 if(finalCommand.includes("checkout")){
   await speak("Redirecting to checkout");
-  window.location.href="checkout.html";
+  window.location.href="/checkout.html";
   return;
 }
 
@@ -295,7 +295,7 @@ if(repeatCount < 3){
   loadCart();
 } else {
   await speak("No response detected. Redirecting to login.");
-  window.location.href="login.html";
+  window.location.href="/login.html";
 }
   }catch(err){
     console.error(err);
@@ -304,12 +304,12 @@ if(repeatCount < 3){
 }
 
 // Checkout
-function goCheckout(){ window.location.href="checkout.html"; }
+function goCheckout(){ window.location.href="/checkout.html"; }
 
 // Logout
 function logout(){
   localStorage.removeItem("talk2buy_token");
-  window.location.href="login.html";
+  window.location.href="/login.html";
 }
 
 // Initial load

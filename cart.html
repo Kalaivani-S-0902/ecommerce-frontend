@@ -73,9 +73,9 @@ h2{text-align:center; margin-bottom:20px;}
 
 <div class="navbar">
   <div class="nav-left">
-    <a href="product.html">Products</a>
-    <a href="cart.html">Cart</a>
-    <a href="orders.html">Orders</a>
+    <a href="/product.html">Products</a>
+    <a href="/cart.html">Cart</a>
+    <a href="/orders.html">Orders</a>
   </div>
   <div class="nav-right">
     <a href="#" onclick="logout()">Logout</a>
@@ -89,7 +89,7 @@ h2{text-align:center; margin-bottom:20px;}
 </div>
 
 <script>
-const BACKEND_URL = "http://127.0.0.1:8000";
+const BACKEND_URL = "https://ecommerce-backend-7c95.onrender.com";
 const token = localStorage.getItem("talk2buy_token");
 console.log("TOKEN:", token);
 let repeatCount = 0;

@@ -1,0 +1,320 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Cart - Talk2Buy</title>
+<style>
+body{
+  background:#001f3f;
+  color:white;
+  font-family:Arial;
+  padding:20px;
+}
+
+h2{text-align:center; margin-bottom:20px;}
+
+/* NAVBAR */
+.navbar{
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+  background:#001f3f;
+  padding:15px 20px;
+  border-radius:10px;
+  border:2px solid yellow;
+  margin-bottom:20px;
+}
+.nav-left a{
+  color:yellow;
+  text-decoration:none;
+  margin-right:20px;
+  font-weight:bold;
+}
+.nav-left a:hover{color:white;}
+.nav-right a{
+  color:red;
+  font-weight:bold;
+  text-decoration:none;
+}
+
+/* CART ITEM */
+.item{
+  border:2px solid yellow;
+  padding:15px;
+  margin-bottom:15px;
+  border-radius:10px;
+  background:#012a4a;
+  display:flex;
+  gap:15px;
+  align-items:flex-start;
+}
+.item img{
+  width:120px;
+  height:120px;
+  object-fit:cover;
+  border-radius:8px;
+}
+.item-details{
+  flex:1;
+}
+.checkout-btn{
+  background:green;
+  color:white;
+  padding:12px 25px;
+  border:none;
+  border-radius:8px;
+  cursor:pointer;
+  font-size:16px;
+  margin-top:20px;
+}
+</style>
+</head>
+<body>
+
+<div class="navbar">
+  <div class="nav-left">
+    <a href="product.html">Products</a>
+    <a href="cart.html">Cart</a>
+    <a href="orders.html">Orders</a>
+  </div>
+  <div class="nav-right">
+    <a href="#" onclick="logout()">Logout</a>
+  </div>
+</div>
+
+<h2>Your Cart</h2>
+<div id="cart">Loading cart...</div>
+<div style="text-align:center;">
+  <button class="checkout-btn" onclick="goCheckout()">Checkout</button>
+</div>
+
+<script>
+const BACKEND_URL = "https://ecommerce-backend-7c95.onrender.com";
+const token = localStorage.getItem("talk2buy_token");
+console.log("TOKEN:", token);
+let repeatCount = 0;
+if(!token) window.location.href="login.html";
+
+// Voice helpers
+function speak(text){
+  return new Promise(resolve=>{
+    const msg = new SpeechSynthesisUtterance(text);
+    msg.onend=resolve;
+    speechSynthesis.speak(msg);
+  });
+}
+
+function listen(timeout=8000){
+  return new Promise(resolve=>{
+    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+    if(!SpeechRecognition){ resolve(""); return; }
+
+    const rec = new SpeechRecognition();
+    rec.lang="en-US";
+    let finished=false;
+
+    rec.onresult = e=>{
+      finished=true;
+      resolve(e.results[0][0].transcript.toLowerCase());
+    };
+    rec.onerror=()=>{ if(!finished) resolve(""); };
+
+    rec.start();
+    setTimeout(()=>{ if(!finished){ rec.stop(); resolve(""); } }, timeout);
+  });
+}
+
+// Remove item from cart
+async function removeItem(productId, productName, color, size, brand){
+  try{
+    const res = await fetch(`${BACKEND_URL}/api/remove-from-cart/${productId}/`, {
+      method:"POST",
+      headers:{ 
+        "Authorization": `Token ${token}`,
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify({
+        color: color,
+        size: size,
+        brand: brand
+      })
+    });
+
+    await speak(`${productName} removed from cart`);
+    loadCart();
+  }catch(err){
+    console.error(err);
+    await speak(`Failed to remove ${productName}`);
+  }
+}
+
+// Load cart
+async function loadCart(){
+  try{
+    const res = await fetch(`${BACKEND_URL}/api/view-cart/`, {
+      headers:{ "Authorization": `Token ${token}` }
+    });
+    const data = await res.json();
+    const cartDiv = document.getElementById("cart");
+    cartDiv.innerHTML="";
+
+    if(!data.items || data.items.length===0){
+      cartDiv.innerHTML="<p>Your cart is empty. Redirecting to products...</p>";
+      await speak("Your cart is empty. Redirecting to products.");
+      setTimeout(()=>{ window.location.href="product.html"; },2000);
+      return;
+    }
+
+    // Loop through each cart item
+    for(let item of data.items){
+      cartDiv.innerHTML += `
+        <div class="item">
+          <img src="${item.image}" alt="${item.product_name}">
+          <div class="item-details">
+            <h3>${item.product_name} (${item.color} - ${item.brand} - Size ${item.size})</h3>
+            <p>${item.description || 'No description'}</p>
+
+            <!-- clearer variant separation -->
+            <p><b>Color:</b> ${item.color || "N/A"}</p>
+            <p><b>Size:</b> ${item.size || "N/A"}</p>
+            <p><b>Brand:</b> ${item.brand || "N/A"}</p>
+
+            <p>Quantity: ${item.quantity}</p>
+            <p>Total: ₹${item.item_total}</p>
+          </div>
+        </div>
+      `;
+
+      // Speak each item
+      await speak(`Product ${item.product_name}`);
+      await speak(`Color ${item.color}, Size ${item.size}, Brand ${item.brand}`);
+      await speak(`Description: ${item.description || 'No description'}`);
+      await speak(`Quantity: ${item.quantity}. Total price ${item.item_total} rupees.`);
+
+      // NEW voice instruction
+      await speak("Say remove to delete this item.");
+
+      // Listen for commands
+      const command = await listen(10000);
+      console.log("User said:", command);
+
+      // SMART REMOVE
+   if(command.includes("remove")){
+  let quantityToRemove = 0;
+  let asked = false;
+
+  while(true){
+    await speak("How many quantity do you want to remove?");
+    let qtyCommand = await listen(8000);
+    qtyCommand = qtyCommand.trim().toLowerCase();
+
+    if(!qtyCommand){
+      await speak("No response detected. Skipping this product.");
+      break; // move to next product
+    }
+
+    // Map spoken numbers to digits
+    const numbersMap = {
+      "one": 1, "two": 2, "three": 3, "four": 4, "five": 5,
+      "six": 6, "seven": 7, "eight": 8, "nine": 9, "ten": 10
+    };
+
+    quantityToRemove = parseInt(qtyCommand);
+    if(isNaN(quantityToRemove)) quantityToRemove = numbersMap[qtyCommand] || 0;
+
+    if(quantityToRemove <= 0 || quantityToRemove > item.quantity){
+      await speak("Invalid number. Please say a valid quantity.");
+      if(asked){ 
+        await speak("Skipping this product.");
+        break; // invalid twice → skip
+      }
+      asked = true;
+      continue;
+    }
+
+    // Valid quantity → remove
+    await fetch(`${BACKEND_URL}/api/remove-from-cart/${item.product_id}/`, {
+      method:"POST",
+      headers:{ 
+        "Authorization": `Token ${token}`,
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify({
+        color: item.color,
+        size: item.size,
+        brand: item.brand,
+        quantity: quantityToRemove
+      })
+    });
+
+    // Calculate new quantity and total
+    let newQuantity = item.quantity - quantityToRemove;
+    let newTotal = (newQuantity > 0) ? (item.item_total / item.quantity) * newQuantity : 0;
+
+    if(newQuantity > 0){
+      await speak(`${quantityToRemove} removed from ${item.product_name}. New quantity is ${newQuantity}. Total amount is ${newTotal} rupees.`);
+    } else {
+      await speak(`${item.product_name} completely removed from cart.`);
+    }
+
+  // Reload cart to get updated data
+await speak("Updating cart details.");
+await loadCart();
+return; // done removing, move to next product
+  }
+
+  // Reload cart to get updated data
+await speak("Updating cart details.");
+await loadCart();
+return; // always move to next item after remove
+}
+      // CHECKOUT
+     
+      // NEXT / NO RESPONSE
+      if(command.includes("next") || command === ""){
+        continue;
+      }
+    }
+
+   await speak(`All items completed. Total cart price is ${data.total_cart_price} rupees.`);
+await speak("Say checkout to place order.");
+
+// listen once
+const finalCommand = await listen(8000);
+
+if(finalCommand.includes("checkout")){
+  await speak("Redirecting to checkout");
+  window.location.href="checkout.html";
+  return;
+}
+
+// if no response → repeat cart up to 3 times
+repeatCount++;
+if(repeatCount < 3){
+  await speak("Repeating your cart.");
+  loadCart();
+} else {
+  await speak("No response detected. Redirecting to login.");
+  window.location.href="login.html";
+}
+  }catch(err){
+    console.error(err);
+    document.getElementById("cart").innerHTML="<p style='color:yellow;'>Error loading cart</p>";
+  }
+}
+
+// Checkout
+function goCheckout(){ window.location.href="checkout.html"; }
+
+// Logout
+function logout(){
+  localStorage.removeItem("talk2buy_token");
+  window.location.href="login.html";
+}
+
+// Initial load
+loadCart();
+</script>
+
+</body>
+</html>

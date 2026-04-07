@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Talk2Buy - Login</title>
+<style>
+body{background:#001f3f;color:white;text-align:center;font-family:Arial;margin:0;padding-top:40%}
+</style>
+</head>
+<body>
+<div style="background:#000814;padding:15px;text-align:center;">
+  <a href="product.html" style="color:white;margin:15px;">Products</a>
+  <a href="cart.html" style="color:white;margin:15px;">Cart</a>
+  <a href="orders.html" style="color:white;margin:15px;">Orders</a>
+  <a href="#" onclick="logout()" style="color:red;margin:15px;">Logout</a>
+</div>
+<h1>Talk2Buy</h1>
+<p>Initializing Voice Login...</p>
+
+<script>
+function speak(text){
+ return new Promise(res=>{
+   const msg=new SpeechSynthesisUtterance(text);
+   msg.onend=res;
+   speechSynthesis.speak(msg);
+ });
+}
+
+function listen(time=8000){
+ return new Promise(res=>{
+   const R=window.SpeechRecognition||window.webkitSpeechRecognition;
+   const rec=new R();
+   rec.lang="en-US";
+   let done=false;
+   rec.onresult=e=>{done=true;res(e.results[0][0].transcript);}
+   rec.onerror=()=>{if(!done)res("");}
+   rec.start();
+   setTimeout(()=>{if(!done){rec.stop();res("");}},time);
+ });
+}
+
+(async()=>{
+ let token=localStorage.getItem("talk2buy_token");
+ if(token){
+   await speak("Welcome back. Opening products.");
+   location.href="product.html";
+   return;
+ }
+
+ await speak("Welcome to Talk2Buy. Please say your email.");
+ let email=await listen();
+
+ await speak("Now say your password.");
+ let password=await listen();
+
+ let res=await fetch("https://ecommerce-backend-7c95.onrender.com/api/voice-login/",{
+   method:"POST",
+   headers:{"Content-Type":"application/json"},
+   body:JSON.stringify({username:email,password:password})
+ });
+ let data=await res.json();
+ localStorage.setItem("talk2buy_token",data.token);
+
+ await speak("Login successful.");
+ location.href="product.html";
+})();
+function logout(){
+  localStorage.removeItem("talk2buy_token");
+  alert("Logged out successfully");
+  window.location.href = "login.html";
+}
+</script>
+</body>
+</html>

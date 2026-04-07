@@ -1,0 +1,304 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Talk2Buy - Products</title>
+<style>
+body{
+  background:#001f3f;
+  color:white;
+  font-family:Arial;
+  margin:0;
+  padding:20px;
+}
+
+h2{
+  text-align:center;
+  margin-bottom:30px;
+}
+
+/* NAVBAR */
+.navbar{
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+  background:#001f3f; 
+  padding:15px 20px;
+  border-radius:10px;
+  border:2px solid yellow;
+  margin-bottom:30px;
+}
+
+.nav-left a{
+  color:yellow;
+  text-decoration:none;
+  margin-right:20px;
+  font-weight:bold;
+}
+
+.nav-left a:hover{
+  color:white;
+}
+
+.nav-center input{
+  padding:8px;
+  border-radius:6px;
+  border:none;
+  outline:none;
+}
+
+.nav-center button{
+  padding:8px 12px;
+  margin-left:5px;
+  background:yellow;
+  border:none;
+  border-radius:6px;
+  cursor:pointer;
+  font-weight:bold;
+}
+
+.nav-center button:hover{
+  background:#ffd700;
+}
+
+.nav-right a{
+  color:red;
+  font-weight:bold;
+  text-decoration:none;
+}
+
+/* PRODUCT CARD */
+.product{
+  border:2px solid yellow;
+  padding:20px;
+  border-radius:12px;
+  margin:auto;
+  text-align:center;
+  max-width:600px;
+  background:#012a4a;
+}
+
+.product img{
+  width:100%;
+  max-width:300px;
+  height:auto;
+  border-radius:10px;
+  margin-bottom:10px;
+}
+</style>
+</head>
+<body>
+
+<div class="navbar">
+  <div class="nav-left">
+    <a href="product.html">Products</a>
+    <a href="cart.html">Cart</a>
+    <a href="orders.html">Orders</a>
+  </div>
+
+  <div class="nav-center">
+    <input type="text" id="searchInput" placeholder="Search product...">
+    <button onclick="searchProduct()">Search</button>
+  </div>
+
+  <div class="nav-right">
+    <a href="#" onclick="logout()">Logout</a>
+  </div>
+</div>
+
+<h2>Available Products</h2>
+<div id="productContainer">
+<h3>Loading products...</h3>
+</div>
+
+<script>
+
+const urlParams = new URLSearchParams(window.location.search);
+let searchKeyword = urlParams.get("search");
+if(searchKeyword){
+  searchKeyword = decodeURIComponent(searchKeyword).trim().toLowerCase();
+}
+
+const BACKEND_URL = "https://ecommerce-backend-7c95.onrender.com";
+const token = localStorage.getItem("talk2buy_token");
+if(!token) window.location.href = "login.html";
+
+// Speech helpers
+function speak(text){
+  return new Promise(resolve=>{
+    const msg = new SpeechSynthesisUtterance(text);
+    msg.rate = 1;
+    msg.onend = resolve;
+    speechSynthesis.speak(msg);
+  });
+}
+
+function listen(timeout=10000){
+  return new Promise(resolve=>{
+    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+    if(!SpeechRecognition){ resolve(""); return; }
+
+    const rec = new SpeechRecognition();
+    rec.lang="en-US";
+    let finished=false;
+
+    rec.onresult=e=>{
+      finished=true;
+      resolve(e.results[0][0].transcript.toLowerCase());
+    };
+    rec.onerror=()=>{ if(!finished) resolve(""); };
+
+    rec.start();
+    setTimeout(()=>{ if(!finished){ rec.stop(); resolve(""); } },timeout);
+  });
+}
+
+function searchProduct(){
+  let value = document.getElementById("searchInput").value;
+  if(value.trim() !== ""){
+    window.location.href = `product.html?search=${value}`;
+  }
+}
+
+async function loadProducts(){
+  try{
+    let res = await fetch(`${BACKEND_URL}/api/products/`);
+    if(!res.ok) throw new Error("API error: " + res.status);
+    let products = await res.json();
+
+    if(searchKeyword){
+  let cleanKeyword = searchKeyword
+    .replace(/show|me|i|want|please/g, "")
+    .trim();
+
+  products = products.filter(p => {
+    let name = p.name.toLowerCase();
+    let desc = p.description.toLowerCase();
+
+    return (
+      name.includes(cleanKeyword) ||
+      desc.includes(cleanKeyword)
+    );
+  });
+}
+
+    if(!products.length){
+      document.getElementById("productContainer").innerHTML = "<h3>No products available.</h3>";
+      return;
+    }
+
+    // Loop through products
+    for(let productIndex=0; productIndex<products.length; productIndex++){
+      const product = products[productIndex];
+
+      // Variants
+      const variants = product.images && product.images.length > 0
+        ? product.images.map(img=>({
+            image: img.url,
+            color: img.color || "",
+            size: img.size || "",
+            brand: img.brand || ""
+          }))
+        : [{image: product.image ? BACKEND_URL + product.image : "", color:"", size:"", brand:""}];
+
+      let variantIndex = 0;
+
+      while(variantIndex < variants.length){
+        const v = variants[variantIndex];
+
+        document.getElementById("productContainer").innerHTML = `
+          <div class="product">
+            <h3>${product.name}</h3>
+            <img src="${v.image}" alt="${product.name}">
+            <p>${product.description}</p>
+            <p>Color: ${v.color || "N/A"}, Size: ${v.size || "N/A"}, Brand: ${v.brand || "N/A"}</p>
+            <p><strong>Price: ₹${product.price}</strong></p>
+          </div>
+        `;
+
+        await speak(`Now showing ${product.name}`);
+        await speak(product.description);
+        if(v.color) await speak(`Color: ${v.color}`);
+        if(v.size) await speak(`Size: ${v.size}`);
+        if(v.brand) await speak(`Brand: ${v.brand}`);
+        await speak(`Price is ${product.price} rupees`);
+        await speak("Say add to cart, skip to go to cart, next for next variant, next product for next product, repeat to hear again. If you say nothing, I will move to next variant.");
+
+        let command = await listen();
+
+        if(command.includes("add")){
+  await speak("How many quantity do you want?");
+  let qtyCommand = await listen();
+  qtyCommand = qtyCommand.trim().toLowerCase();
+
+  // Convert spoken numbers to digits
+  const numbersMap = {
+    "one": 1, "two": 2, "three": 3, "four": 4, "five": 5,
+    "six": 6, "seven": 7, "eight": 8, "nine": 9, "ten": 10
+  };
+
+  let quantity = parseInt(qtyCommand);
+  if(isNaN(quantity)) quantity = numbersMap[qtyCommand] || 1; // fallback to 1
+
+  await fetch(`${BACKEND_URL}/api/add-to-cart-default/${product.id}/`, {
+    method: "POST",
+    headers: { "Authorization": `Token ${token}`, "Content-Type":"application/json" },
+    body: JSON.stringify({
+      quantity: quantity,
+      color: v.color,
+      size: v.size,
+      brand: v.brand
+    })
+  });
+  await speak(`${quantity} item(s) added to cart successfully`);
+  variantIndex++;
+}
+
+        else if(command.includes("skip")){
+          await speak("Going to cart page");
+          window.location.href="cart.html";
+          return;
+        }
+        else if(command.includes("next product")){
+          break; // move to next product
+        }
+        else if(command.includes("next")){
+          variantIndex++;
+        }
+        else if(command.includes("repeat")){
+          continue; // repeat current variant
+        }
+        else{
+          // nothing said → go to next variant
+          variantIndex++;
+        }
+      }
+    }
+
+    await speak("All products completed.");
+await speak("If you want to browse products again, say continue, otherwise say skip to go to cart.");
+let finalCommand = await listen();
+if(!finalCommand.includes("skip")){
+  await speak("Restarting product list.");
+  loadProducts(); // start from first product again
+} else {
+  await speak("Going to cart page.");
+  window.location.href="cart.html";
+}
+
+  }catch(error){
+    console.error(error);
+    document.getElementById("productContainer").innerHTML = "<h3 style='color:yellow;'>Error loading products. Check console.</h3>";
+  }
+}
+
+loadProducts();
+
+function logout(){
+  localStorage.removeItem("talk2buy_token");
+  alert("Logged out successfully");
+  window.location.href="login.html";
+}
+</script>
+</body>
+</html>

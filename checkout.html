@@ -1,0 +1,290 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Checkout - Talk2Buy</title>
+
+<style>
+body{
+  background:#001f3f;
+  color:white;
+  font-family:Arial;
+  text-align:center;
+  padding:20px;
+}
+
+.navbar{
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+  background:#001f3f;
+  padding:15px 20px;
+  border-radius:10px;
+  border:2px solid yellow;
+  margin-bottom:20px;
+}
+
+/* LEFT LINKS */
+.nav-left a{
+  color:yellow;
+  text-decoration:none;
+  margin-right:20px;
+  font-weight:bold;
+}
+
+.nav-left a:hover{
+  color:white;
+}
+
+/* RIGHT LOGOUT */
+.nav-right a{
+  color:red;
+  font-weight:bold;
+  text-decoration:none;
+}
+
+.item{
+  border:1px solid yellow;
+  padding:15px;
+  margin:10px;
+  border-radius:10px;
+  background:#003366;
+  display:flex;
+  align-items:center;
+  gap:15px;
+}
+
+.item img{
+  width:80px;
+  height:80px;
+  border-radius:8px;
+}
+
+button{
+  padding:10px 20px;
+  border:none;
+  border-radius:6px;
+  cursor:pointer;
+  margin:10px;
+  font-size:16px;
+}
+
+.yes-btn{ background:green; color:white; }
+.no-btn{ background:red; color:white; }
+
+</style>
+</head>
+
+<body>
+
+<div class="navbar">
+
+  <!-- LEFT -->
+  <div class="nav-left">
+    <a href="product.html">Products</a>
+    <a href="cart.html">Cart</a>
+    <a href="orders.html">Orders</a>
+  </div>
+
+  <!-- RIGHT -->
+  <div class="nav-right">
+    <a href="#" onclick="logout()">Logout</a>
+  </div>
+
+</div>
+
+<h2>Confirm Your Order</h2>
+<p>Payment Mode: Cash on Delivery</p>
+
+<div id="cartItems">Loading...</div>
+
+<div id="manualButtons" style="display:none;">
+  <button class="yes-btn" onclick="placeOrder()">Yes</button>
+  <button class="no-btn" onclick="goBack()">No</button>
+</div>
+
+<script>
+const token = localStorage.getItem("talk2buy_token");
+if(!token){
+  window.location.href = "login.html";
+}
+
+function speak(text){
+  return new Promise(resolve=>{
+    const msg = new SpeechSynthesisUtterance(text);
+    msg.onend = resolve;
+    speechSynthesis.speak(msg);
+  });
+}
+
+function listen(time=6000){
+  return new Promise(resolve=>{
+    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+
+    if(!SpeechRecognition){
+      resolve("");
+      return;
+    }
+
+    const recognition = new SpeechRecognition();
+    recognition.lang = "en-US";
+
+    let done=false;
+
+    recognition.onresult = e=>{
+      done=true;
+      resolve(e.results[0][0].transcript.toLowerCase());
+    };
+
+    recognition.onerror = ()=>{
+      if(!done) resolve("");
+    };
+
+    recognition.start();
+
+    setTimeout(()=>{
+      if(!done){
+        recognition.stop();
+        resolve("");
+      }
+    }, time);
+  });
+}
+
+// Load cart items
+async function loadCart(){
+  const res = await fetch("https://ecommerce-backend-7c95.onrender.com/api/view-cart/",{
+    headers:{
+      "Authorization": `Token ${token}`
+    }
+  });
+
+  const data = await res.json();
+  const div = document.getElementById("cartItems");
+  div.innerHTML = "";
+
+  if(!data.items || data.items.length === 0){
+    div.innerHTML = "<p>Cart is empty</p>";
+    return;
+  }
+
+  for(let item of data.items){
+    div.innerHTML += `
+      <div class="item">
+        <img src="${item.image}">
+        <div>
+          <h3>${item.product_name} (${item.color} - ${item.brand} - Size ${item.size})</h3>
+          <p>${item.description}</p>
+
+          <p><b>Color:</b> ${item.color || "N/A"}</p>
+          <p><b>Size:</b> ${item.size || "N/A"}</p>
+          <p><b>Brand:</b> ${item.brand || "N/A"}</p>
+
+<p>Quantity: ${item.quantity}</p>
+<p>Total: ₹${item.item_total}</p>
+        </div>
+      </div>
+    `;
+
+    await speak(`Product ${item.product_name}`);
+    await speak(`Color ${item.color}, Size ${item.size}, Brand ${item.brand}`);
+    await speak(`Quantity ${item.quantity}, Total ${item.item_total} rupees`);
+  }
+
+  await speak("Payment method is cash on delivery. Say yes to confirm order or no to go back.");
+
+  startVoiceConfirmation();
+}
+
+// Voice confirmation with retry
+async function startVoiceConfirmation(){
+  let attempts = 0;
+
+  while(attempts < 5){
+    let command = await listen();
+    console.log("User said:", command);
+
+    if(command.includes("yes")){
+      placeOrder();
+      return;
+    }
+
+    if(
+  command.includes("no") ||
+  command.includes("nope") ||
+  command.includes("cancel") ||
+  command.includes("go back") ||
+  command.includes("back")
+){
+  await speak("Going back to cart");
+  goBack();
+  return;
+}
+
+    attempts++;
+    await speak("Sorry, I did not understand. Please say yes or no.");
+  }
+
+  // After 5 failed attempts
+  await speak("Voice failed. Please use buttons.");
+  document.getElementById("manualButtons").style.display = "block";
+}
+
+// Place order
+async function placeOrder(){
+  try{
+    let res = await fetch("https://ecommerce-backend-7c95.onrender.com/api/checkout/",{
+      method:"POST",
+      headers:{
+        "Authorization": `Token ${token}`
+      }
+    });
+
+    let data = await res.json();
+
+    //  CHECK SUCCESS
+    if(res.ok){
+      await speak("Order placed successfully");
+
+
+      // 👉 SUCCESS → go to location page
+      window.location.href = "orders.html";
+
+    } else {
+      //  FAILURE → go back to cart
+      console.error("Checkout failed:", data);
+
+      await speak("Order failed. Returning to cart");
+      alert("Order failed. Returning to cart");
+
+      window.location.href = "cart.html";
+    }
+
+  }catch(error){
+    console.log("Error:", error);
+
+    await speak("Network error. Returning to cart");
+    alert("Network error");
+
+    //  NETWORK ERROR → go back to cart
+    window.location.href = "cart.html";
+  }
+}
+// Logout
+function logout(){
+  localStorage.removeItem("talk2buy_token");
+  alert("Logged out");
+  window.location.href = "login.html";
+}
+
+function goBack(){
+  window.location.href = "cart.html";
+}
+
+// Start
+loadCart();
+
+</script>
+
+</body>
+</html>

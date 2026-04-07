@@ -1,0 +1,247 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Location & Tracking - Talk2Buy</title>
+
+<style>
+body{
+  background:#001f3f;
+  color:white;
+  font-family:Arial;
+  text-align:center;
+  padding:20px;
+}
+
+.navbar{
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+  background:#001f3f;
+  padding:15px 20px;
+  border-radius:10px;
+  border:2px solid yellow;
+  margin-bottom:20px;
+}
+
+/* LEFT LINKS */
+.nav-left a{
+  color:yellow;
+  text-decoration:none;
+  margin-right:20px;
+  font-weight:bold;
+}
+
+.nav-left a:hover{
+  color:white;
+}
+
+/* RIGHT LOGOUT */
+.nav-right a{
+  color:red;
+  font-weight:bold;
+  text-decoration:none;
+}
+
+.box{
+  background:#003366;
+  padding:20px;
+  border-radius:10px;
+  margin:15px;
+}
+
+.status{
+  margin:10px;
+  padding:10px;
+  border-radius:6px;
+  background:#222;
+}
+
+.active{
+  background:green;
+}
+</style>
+</head>
+
+<body>
+
+<div class="navbar">
+
+  <div class="nav-left">
+    <a href="product.html">Products</a>
+    <a href="cart.html">Cart</a>
+    <a href="orders.html">Orders</a>
+  </div>
+
+  <div class="nav-right">
+    <a href="#" onclick="logout()">Logout</a>
+  </div>
+
+</div>
+
+<h2>Your Location</h2>
+
+<div class="box" id="locationBox">
+  Detecting location...
+</div>
+
+<h2>Order Tracking</h2>
+
+<div class="box">
+  <div id="status1" class="status">Order Placed</div>
+  <div id="status2" class="status">Shipped</div>
+  <div id="status3" class="status">Out for Delivery</div>
+  <div id="status4" class="status">Delivered</div>
+</div>
+
+<script>
+const token = localStorage.getItem("talk2buy_token");
+
+function speak(text){
+  return new Promise(resolve=>{
+    const msg = new SpeechSynthesisUtterance(text);
+    msg.onend = resolve;
+    speechSynthesis.speak(msg);
+  });
+}
+
+// -----------------------------
+//  GET LOCATION
+// -----------------------------
+function getLocation(){
+  if(navigator.geolocation){
+    navigator.geolocation.getCurrentPosition(showPosition, showError);
+  } else {
+    document.getElementById("locationBox").innerHTML = "Location not supported";
+  }
+}
+
+async function showPosition(position){
+  let lat = position.coords.latitude;
+  let lon = position.coords.longitude;
+
+  let locationText = `Latitude: ${lat} <br> Longitude: ${lon}`;
+
+  document.getElementById("locationBox").innerHTML = locationText;
+
+  // Save location
+  localStorage.setItem("user_location", JSON.stringify({lat, lon}));
+
+  await speak("Your location has been detected");
+}
+
+function showError(error){
+  document.getElementById("locationBox").innerHTML = "Unable to get location";
+}
+
+// -----------------------------
+//  ORDER TRACKING SIMULATION
+// -----------------------------
+async function startTracking(){
+
+  await speak("Your order is placed");
+
+  document.getElementById("status1").classList.add("active");
+
+  setTimeout(async ()=>{
+    document.getElementById("status2").classList.add("active");
+    await speak("Your order has been shipped");
+  }, 3000);
+
+  setTimeout(async ()=>{
+    document.getElementById("status3").classList.add("active");
+    await speak("Your order is out for delivery");
+  }, 6000);
+
+  setTimeout(async ()=>{
+  document.getElementById("status4").classList.add("active");
+  await speak("Your order has been delivered");
+
+  askNextAction();   
+
+}, 9000);
+}
+
+// Logout
+function logout(){
+  localStorage.removeItem("talk2buy_token");
+  alert("Logged out");
+  window.location.href = "login.html";
+}
+
+// -----------------------------
+//  CONTINUE SHOPPING (VOICE)
+// -----------------------------
+async function askNextAction(){
+
+  await speak("Do you want to continue shopping? Say yes or no");
+
+  let attempts = 0;
+
+  while(attempts < 3){
+
+    let command = await listen(5000);
+
+    if(command.includes("yes")){
+      await speak("Redirecting to search page");
+      window.location.href = "search.html";
+      return;
+    }
+
+    if(command.includes("no")){
+      await speak("Logging out");
+      window.location.href = "login.html";
+      return;
+    }
+
+    attempts++;
+    await speak("Sorry, I didn't understand. Please say yes or no.");
+  }
+
+  //  After 3 failed attempts
+  await speak("Voice not recognized. Redirecting to login page");
+  window.location.href = "login.html";
+}
+
+function listen(time=5000){
+  return new Promise(resolve=>{
+    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+
+    if(!SpeechRecognition){
+      resolve("");
+      return;
+    }
+
+    const recognition = new SpeechRecognition();
+    recognition.lang = "en-US";
+
+    let done = false;
+
+    recognition.onresult = e=>{
+      done = true;
+      resolve(e.results[0][0].transcript.toLowerCase());
+    };
+
+    recognition.onerror = ()=>{
+      if(!done) resolve("");
+    };
+
+    recognition.start();
+
+    setTimeout(()=>{
+      if(!done){
+        recognition.stop();
+        resolve("");
+      }
+    }, time);
+  });
+}
+
+// Start everything
+getLocation();
+startTracking();
+
+</script>
+
+</body>
+</html>

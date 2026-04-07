@@ -1,0 +1,227 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Talk2Buy - Search</title>
+
+<style>
+
+body{
+  background:#001f3f;
+  color:white;
+  font-family:Arial;
+  text-align:center;
+  padding:40px;
+}
+
+h1{
+  color:#ffd60a;
+}
+
+/* SEARCH BOX */
+
+.search-box{
+  margin-top:30px;
+}
+
+.search-box input{
+  padding:10px;
+  width:250px;
+  border-radius:8px;
+  border:none;
+}
+
+.search-box button{
+  padding:10px 15px;
+  border:none;
+  background:#ffd60a;
+  color:black;
+  border-radius:8px;
+  cursor:pointer;
+  margin-left:5px;
+}
+
+</style>
+</head>
+
+<body>
+
+<h1>Talk2Buy</h1>
+<h2>Search Products</h2>
+
+<div class="search-box">
+  <input type="text" id="searchInput" placeholder="Type product name...">
+  <button onclick="manualSearch()">🔍</button>
+</div>
+
+<p>🎤 Listening for your product...</p>
+
+<script>
+
+const BACKEND_URL = "https://ecommerce-backend-7c95.onrender.com";
+let attempts = 0;
+
+// SPEAK
+function speak(text){
+  return new Promise(resolve=>{
+    const msg = new SpeechSynthesisUtterance(text);
+    msg.onend = resolve;
+    speechSynthesis.speak(msg);
+  });
+}
+
+// LISTEN
+function listen(timeout=6000){
+  return new Promise(resolve=>{
+    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+
+    if(!SpeechRecognition){
+      resolve("");
+      return;
+    }
+
+    const rec = new SpeechRecognition();
+    rec.lang="en-US";
+
+    let finished=false;
+
+    rec.onresult=e=>{
+      finished=true;
+      resolve(e.results[0][0].transcript.toLowerCase());
+    };
+
+    rec.onerror=()=>{ if(!finished) resolve(""); };
+
+    rec.start();
+
+    setTimeout(()=>{
+      if(!finished){
+        rec.stop();
+        resolve("");
+      }
+    },timeout);
+  });
+}
+
+// VOICE SEARCH
+async function startSearch(){
+
+  await speak("Search products");
+
+  let command = await listen(6000);
+
+  if(!command){
+
+    attempts++;
+
+    if(attempts < 3){
+      await speak("Voice not clear. Please say again");
+      startSearch();
+    }else{
+      await speak("Moving to products page");
+      window.location.href = "product.html";
+    }
+
+    return;
+  }
+
+  await speak("Searching for " + command);
+  goToProduct(command);
+}
+
+// MANUAL SEARCH
+function manualSearch(){
+  let keyword = document.getElementById("searchInput").value.toLowerCase();
+
+  if(!keyword){
+    alert("Enter product name");
+    return;
+  }
+
+  goToProduct(keyword);
+}
+
+// NAVIGATE WITH SEARCH DATA
+async function goToProduct(keyword){
+
+  try{
+
+   let res = await fetch(`${BACKEND_URL}/api/products/`);
+
+if(!res.ok){
+  console.error("API ERROR:", res.status);
+  await speak("Server error. Loading all products.");
+  window.location.href = "product.html";
+  return;
+}
+
+let products = await res.json();
+    console.log("User said:", keyword);
+    console.log("Products:", products);
+
+    let cleanKeyword = keyword
+  .toLowerCase()
+  .replace(/[^\w\s]/g, "")   
+  .trim();
+
+    // remove unnecessary words
+   cleanKeyword = cleanKeyword.replace(/\b(show|me|i|want|please)\b/g, "").trim();
+    // split words
+    let words = cleanKeyword.split(" ");
+
+    // smarter matching
+    
+    let found = products.find(p => {
+  let name = (p.name || p.title || "").toLowerCase();
+  let desc = (p.description || "").toLowerCase();
+
+  // normalize words (shoe → shoes)
+  let normalizedWords = words.map(w => {
+    if(w.endsWith("s")) return w.slice(0, -1);
+    return w;
+  });
+
+  return (
+    name.includes(cleanKeyword) ||
+
+    words.some(word =>
+      name.includes(word) || desc.includes(word)
+    ) ||
+
+    normalizedWords.some(word =>
+      name.includes(word) ||
+      name.includes(word + "s") ||
+      desc.includes(word)
+    )
+  );
+});
+
+    if(found){
+      await speak("Product found");
+
+      // use cleaned keyword
+      let finalKeyword = cleanKeyword;
+
+      window.location.href = `product.html?search=${encodeURIComponent(finalKeyword)}`;
+
+    }else{
+      await speak("Product not available. Going to product page");
+
+      setTimeout(()=>{
+        window.location.href = "product.html";
+      }, 800);
+    }
+
+  }catch(error){
+    console.error(error);
+    window.location.href = "product.html";
+  }
+}
+
+// AUTO START
+window.onload = startSearch;
+
+</script>
+
+</body>
+</html>

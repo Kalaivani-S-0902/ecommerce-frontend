@@ -165,6 +165,7 @@ async function loadProducts(){
     let res = await fetch(`${BACKEND_URL}/api/products/`);
     if(!res.ok) throw new Error("API error: " + res.status);
     let products = await res.json();
+    console.log("Products:", products);
 
     if(searchKeyword){
   let cleanKeyword = searchKeyword
@@ -183,7 +184,7 @@ async function loadProducts(){
 }
 
     if(!products.length){
-      document.getElementById("productContainer").innerHTML = "<h3>No products available.</h3>";
+      document.getElementById("productContainer").innerHTML += "<h3>No products available.</h3>";
       return;
     }
 
@@ -206,7 +207,7 @@ async function loadProducts(){
       while(variantIndex < variants.length){
         const v = variants[variantIndex];
 
-        document.getElementById("productContainer").innerHTML = `
+        document.getElementById("productContainer").innerHTML += `
           <div class="product">
             <h3>${product.name}</h3>
             <img src="${v.image}" alt="${product.name}">
@@ -288,11 +289,13 @@ if(!finalCommand.includes("skip")){
 
   }catch(error){
     console.error(error);
-    document.getElementById("productContainer").innerHTML = "<h3 style='color:yellow;'>Error loading products. Check console.</h3>";
+    document.getElementById("productContainer").innerHTML += "<h3 style='color:yellow;'>Error loading products. Check console.</h3>";
   }
 }
 
-loadProducts();
+document.addEventListener("click", () => {
+  loadProducts();
+}, { once: true });
 
 function logout(){
   localStorage.removeItem("talk2buy_token");

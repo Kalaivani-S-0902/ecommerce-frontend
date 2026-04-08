@@ -293,9 +293,7 @@ if(!finalCommand.includes("skip")){
   }
 }
 
-document.addEventListener("click", () => {
-  loadProducts();
-}, { once: true });
+loadProducts()
 
 function logout(){
   localStorage.removeItem("talk2buy_token");

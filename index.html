@@ -217,10 +217,9 @@ async function manualRegister(){
 
 }
 
-// Automatically call loadProducts on page load
-window.addEventListener("DOMContentLoaded", () => {
-  loadProducts();
-});
+document.addEventListener("click", async () => {
+  await startRegister();
+}, { once: true });
 
 </script>
 

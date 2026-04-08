@@ -18,11 +18,7 @@ body{background:#001f3f;color:white;text-align:center;font-family:Arial;margin:0
 <p>Initializing Voice Login...</p>
 
 <script>
-let token = localStorage.getItem("talk2buy_token");
 
-if(!token){
-  window.location.href = "/login.html";
-}
 function speak(text){
  return new Promise(res=>{
    const msg=new SpeechSynthesisUtterance(text);

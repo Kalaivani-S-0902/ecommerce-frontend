@@ -195,7 +195,7 @@ async function loadProducts(){
       // Variants
       const variants = product.images && product.images.length > 0
         ? product.images.map(img=>({
-            image: "https://ecommerce-backend-7c95.onrender.com" +img.url,
+            image: img.url,
             color: img.color || "",
             size: img.size || "",
             brand: img.brand || ""

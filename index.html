@@ -77,35 +77,44 @@ function speak(text){
 function listen(time=6000){
  return new Promise(resolve=>{
 
-  const SpeechRecognition=window.SpeechRecognition || window.webkitSpeechRecognition;
+  const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
 
   if(!SpeechRecognition){
    resolve("");
    return;
   }
 
-  const rec=new SpeechRecognition();
-  rec.lang="en-US";
+  const rec = new SpeechRecognition();
+  rec.lang = "en-US";
+  rec.interimResults = false;
+  rec.maxAlternatives = 1;
 
-  let done=false;
+  let finished = false;
 
-  rec.onresult=e=>{
-   done=true;
-   resolve(e.results[0][0].transcript);
+  rec.onresult = e=>{
+   finished = true;
+   resolve(e.results[0][0].transcript.toLowerCase());
+  };
+
+  rec.onerror = ()=>{
+   if(!finished) resolve("");
+  };
+
+  rec.onend = ()=>{
+   if(!finished) resolve("");
   };
 
   rec.start();
 
   setTimeout(()=>{
-   if(!done){
+   if(!finished){
     rec.stop();
     resolve("");
    }
-  },time);
+  }, time);
 
  });
 }
-
 async function startRegister(){
 
  // generate random user id
@@ -115,10 +124,12 @@ async function startRegister(){
 
  await speak("Welcome to Talk2Buy");
 
- await speak("Please say your password");
+await speak("Please say your password");
 
- listenPassword();
+// small delay 
+await new Promise(r => setTimeout(r, 1000));
 
+listenPassword();
 }
 
 async function listenPassword(){
@@ -206,7 +217,9 @@ async function manualRegister(){
 
 }
 
-window.onload=startRegister;
+document.addEventListener("click", async () => {
+  await startRegister();
+}, { once: true });
 
 </script>
 

@@ -186,6 +186,7 @@ const res = await fetch("https://ecommerce-backend-7c95.onrender.com/api/voice-r
 });
 
 const data = await res.json();
+console.log("LOGIN RESPONSE:", data);
 
 if(data.token){
   console.log("REAL TOKEN:", data.token);

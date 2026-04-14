@@ -119,7 +119,7 @@ async function startSearch(){
       startSearch();
     }else{
       await speak("Moving to products page");
-      window.location.href = "/product.html";
+      window.location.href = "./product.html";
     }
 
     return;
@@ -151,7 +151,7 @@ async function goToProduct(keyword){
 if(!res.ok){
   console.error("API ERROR:", res.status);
   await speak("Server error. Loading all products.");
-  window.location.href = "/product.html";
+  window.location.href = "./product.html";
   return;
 }
 
@@ -208,13 +208,13 @@ let products = await res.json();
       await speak("Product not available. Going to product page");
 
       setTimeout(()=>{
-        window.location.href = "/product.html";
+        window.location.href = "./product.html";
       }, 800);
     }
 
   }catch(error){
     console.error(error);
-    window.location.href = "/product.html";
+    window.location.href = "./product.html";
   }
 }
 

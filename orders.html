@@ -82,7 +82,7 @@ h2{
     
 const token = localStorage.getItem("talk2buy_token");
 if(!token){
-  window.location.href = "/login.html";
+  window.location.href = "./login.html";
 }
 function speak(text){
   return new Promise(resolve=>{
@@ -240,7 +240,7 @@ let nextAction = await listen();
 //  HANDLE RESPONSE
 if(nextAction.includes("skip")){
   await speak("Skipping and redirecting to location page");
-  window.location.href = "/location.html";
+  window.location.href = "./location.html";
   return;
 }
 
@@ -257,11 +257,11 @@ count++;
   }
 
   await speak("All products explained. Redirecting to location page");
-  window.location.href = "/location.html";
+  window.location.href = "./location.html";
 
 }else{
   await speak("Redirecting to location page");
-  window.location.href = "/location.html";
+  window.location.href = "./location.html";
 }
 
   }catch(error){
@@ -273,7 +273,7 @@ loadOrders();
 function logout(){
   localStorage.removeItem("talk2buy_token");
   alert("Logged out successfully");
-  window.location.href = "/index.html";
+  window.location.href = "./index.html";
 }
 </script>
 

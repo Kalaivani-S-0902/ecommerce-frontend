@@ -73,9 +73,9 @@ h2{text-align:center; margin-bottom:20px;}
 
 <div class="navbar">
   <div class="nav-left">
-    <a href="/product.html">Products</a>
-    <a href="/cart.html">Cart</a>
-    <a href="/orders.html">Orders</a>
+    <a href="product.html">Products</a>
+    <a href="cart.html">Cart</a>
+    <a href="orders.html">Orders</a>
   </div>
   <div class="nav-right">
     <a href="#" onclick="logout()">Logout</a>
@@ -93,7 +93,7 @@ const BACKEND_URL = "https://ecommerce-backend-7c95.onrender.com";
 const token = localStorage.getItem("talk2buy_token");
 console.log("TOKEN:", token);
 let repeatCount = 0;
-if(!token) window.location.href="/index.html";
+if(!token) window.location.href="./index.html";
 
 // Voice helpers
 function speak(text){
@@ -295,7 +295,7 @@ if(repeatCount < 3){
   loadCart();
 } else {
   await speak("No response detected. Redirecting to login.");
-  window.location.href="/index.html";
+  window.location.href="./index.html";
 }
   }catch(err){
     console.error(err);
@@ -309,7 +309,7 @@ function goCheckout(){ window.location.href="/checkout.html"; }
 // Logout
 function logout(){
   localStorage.removeItem("talk2buy_token");
-  window.location.href="/index.html";
+  window.location.href="./index.html";
 }
 
 // Initial load

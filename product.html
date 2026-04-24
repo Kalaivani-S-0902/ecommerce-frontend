@@ -207,7 +207,7 @@ async function loadProducts(){
       while(variantIndex < variants.length){
         const v = variants[variantIndex];
 
-        document.getElementById("productContainer").innerHTML += `
+        document.getElementById("productContainer").innerHTML = `
           <div class="product">
             <h3>${product.name}</h3>
             <img src="${v.image}" alt="${product.name}">
